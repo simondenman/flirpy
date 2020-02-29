@@ -96,13 +96,13 @@ class splitter:
                 self.exiftool.write_meta(filemask)
 
                 # Copy geotags
-                if self.export_tiff:
-                    logger.info("Copying tags to radiometric")
-                    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder, ext="tiff")
+                #if self.export_tiff:
+                #    logger.info("Copying tags to radiometric")
+                #    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder, ext="tiff")
                 
-                if self.export_preview:
-                    logger.info("Copying tags to preview")
-                    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=preview_folder, ext=self.preview_format)
+                #if self.export_preview:
+                #    logger.info("Copying tags to preview")
+                #    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=preview_folder, ext=self.preview_format)
         
         return folders
         
@@ -135,6 +135,7 @@ class splitter:
     def _process_seq(self, input_file, output_subfolder):
         
         logger.debug("Processing {}".format(input_file))
+        gpslog = open(os.path.join(output_subfolder, "gpsLog.txt"), 'w')
         
         with open(input_file, 'rb') as seq_file:
             
@@ -182,7 +183,12 @@ class splitter:
                 
                 if i % self.step == 0:
 
-                    frame = Fff(chunk, height=self.height, width=self.width)
+                    frame = Fff(chunk)
+
+                    gps_data = frame.get_gps()
+                    gps_data = ','.join(str(g) for g in gps_data)
+                    gpslog.write(gps_data)
+                    gpslog.write('\n')
                     
                     # Need FFF files to extract meta, but we do it one go afterwards
                     if self.export_meta and self._check_overwrite(filename_fff):
@@ -211,4 +217,5 @@ class splitter:
             
                 self.frame_count += 1
                     
+        gpslog.close()  
         return
