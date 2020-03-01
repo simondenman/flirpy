@@ -96,13 +96,13 @@ class splitter:
                 self.exiftool.write_meta(filemask)
 
                 # Copy geotags
-                #if self.export_tiff:
-                #    logger.info("Copying tags to radiometric")
-                #    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder, ext="tiff")
+                if self.export_tiff:
+                    logger.info("Copying tags to radiometric")
+                    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder, ext="tiff")
                 
-                #if self.export_preview:
-                #    logger.info("Copying tags to preview")
-                #    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=preview_folder, ext=self.preview_format)
+                if self.export_preview:
+                    logger.info("Copying tags to preview")
+                    self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=preview_folder, ext=self.preview_format)
         
         return folders
         
@@ -219,3 +219,80 @@ class splitter:
                     
         gpslog.close()  
         return
+
+
+
+class reader:
+    
+    def __init__(self, start_index=0, step=1, width=640, height=512, file_list = None):
+                    
+        self.width = width
+        self.height = height
+        self.start_index = start_index
+        self.step = step
+        self.frame_count = self.start_index
+        self.use_mmap = True
+        self.file_list = file_list
+            
+        if isinstance(self.file_list, str):
+            self.file_list = [self.file_list]
+
+        self.file_list = [os.path.expanduser(f) for f in self.file_list]
+        self.frame_count = self.start_index
+
+        self.current_file_idx = 0
+        self._load_next_file()
+
+    def _load_next_file(self):
+        print('loading ' + self.file_list[self.current_file_idx])
+        self.current_file_handle = open(self.file_list[self.current_file_idx], 'rb')
+        if self.use_mmap:
+            self.seq_blob = mmap.mmap(self.current_file_handle.fileno(), 0, access=mmap.ACCESS_READ)
+        else:
+            self.seq_blob = self.current_file_handle.read()
+
+        self.it = self._get_fff_iterator(self.seq_blob)
+
+        self.prev_pos = 0
+        self.meta = None
+            
+    def _get_fff_iterator(self, seq_blob):
+        
+        magic_pattern_fff = "\x46\x46\x46\x00".encode()
+
+        valid = re.compile(magic_pattern_fff)
+        return valid.finditer(seq_blob)
+    
+    def read(self):
+        
+        index = 0;
+        while (index == 0):
+            match = next(self.it, None)
+            if (match is None):
+                self.current_file_idx = self.current_file_idx + 1;
+                if (self.current_file_idx < len(self.file_list)):
+                    self._load_next_file()
+                    continue
+                else:
+                    print('Loaded All Files')
+                    return None, None, None
+
+            index = match.start()
+            chunksize = index - self.prev_pos
+            self.prev_pos = index
+       
+        # Extract next FFF frame
+        if self.use_mmap is False:
+            chunk = self.seq_blob[index:index+chunksize]
+        else:
+            chunk = self.seq_blob.read(chunksize)       
+
+        frame = Fff(chunk)
+
+        gps_data = frame.get_gps()
+                                        
+        image = frame.get_image()
+        drange = image.max()-image.min()
+        preview_data = (255.0*((image-image.min())/drange)).astype('uint8')
+
+        return image, preview_data, gps_data
