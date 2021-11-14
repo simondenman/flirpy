@@ -98,7 +98,7 @@ class splitter:
                 self.exiftool.write_meta(filemask)
 
                 # Copy geotags
-                if self.export_tiff:
+                if self.export_tiff and self.export_fff:
                     logger.info("Copying tags to radiometric")
                     self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder,
                                             ext="tiff")
