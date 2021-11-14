@@ -103,7 +103,7 @@ class splitter:
                     self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=radiometric_folder,
                                             ext="tiff")
 
-                if self.export_preview:
+                if self.export_preview and self.export_fff:
                     logger.info("Copying tags to preview")
                     self.exiftool.copy_meta(folder, filemask=copy_filemask, output_folder=preview_folder,
                                             ext=self.preview_format)
