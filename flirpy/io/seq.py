@@ -308,7 +308,6 @@ class reader:
 
 
         drange = image.max() - image.min()
-        print('%f %f' % (image.min(), image.max()))
         preview_data = (255.0 * ((image - image.min()) / drange)).astype('uint8')
         preview_data = cv2.cvtColor(preview_data, cv2.COLOR_GRAY2RGB)
 
