@@ -230,7 +230,7 @@ class splitter:
 
 class reader:
 
-    def __init__(self, start_index=0, step=1, width=640, height=512, file_list=None):
+    def __init__(self, start_index=0, step=1, width=640, height=512, file_list=None, exiftool_path='exiftool'):
 
         self.width = width
         self.height = height
@@ -239,6 +239,7 @@ class reader:
         self.frame_count = self.start_index
         self.use_mmap = True
         self.file_list = file_list
+        self.exiftool = Exiftool(exiftool_path)
 
         if isinstance(self.file_list, str):
             self.file_list = [self.file_list]
@@ -297,8 +298,17 @@ class reader:
 
         gps_data = frame.get_gps()
 
-        image = frame.get_image()
+        frame.write('temp_seq.fff')
+        self.exiftool.write_meta('temp_seq.fff')
+        meta = self.exiftool.meta_from_file('temp_seq.txt')
+
+        image = frame.get_radiometric_image(meta)
+#        image += 273.15  # Convert to Kelvin
+#        image /= 0.04
+
+
         drange = image.max() - image.min()
+        print('%f %f' % (image.min(), image.max()))
         preview_data = (255.0 * ((image - image.min()) / drange)).astype('uint8')
         preview_data = cv2.cvtColor(preview_data, cv2.COLOR_GRAY2RGB)
 
