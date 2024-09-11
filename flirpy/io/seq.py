@@ -8,6 +8,8 @@ import logging
 from glob import iglob, glob
 import subprocess
 from tqdm.autonotebook import tqdm
+import random
+import string
 
 try:
     from pathlib import Path
@@ -240,6 +242,8 @@ class reader:
         self.use_mmap = True
         self.file_list = file_list
         self.exiftool = Exiftool(exiftool_path)
+        self.last_good_meta = None
+        self.random_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
 
         if isinstance(self.file_list, str):
             self.file_list = [self.file_list]
@@ -298,14 +302,20 @@ class reader:
 
         gps_data = frame.get_gps()
 
-        frame.write('temp_seq.fff')
-        self.exiftool.write_meta('temp_seq.fff')
-        meta = self.exiftool.meta_from_file('temp_seq.txt')
+        frame.write(self.random_name + '.fff')
+        self.exiftool.write_meta(self.random_name + '.fff')
+        meta = self.exiftool.meta_from_file(self.random_name + '.txt')
 
-        image = frame.get_radiometric_image(meta)
-#        image += 273.15  # Convert to Kelvin
-#        image /= 0.04
-
+        try:
+            image = frame.get_radiometric_image(meta)
+            self.last_good_meta = meta
+        except:
+            if (self.last_good_meta is not None):
+                print('WARNING: No meta data for frame, using last known good metadata')
+                image = frame.get_radiometric_image(self.last_good_meta)
+            else:
+                print('WARNING: No meta data for frame and none previously extracted, raw data returned')
+                image = frame.get_image()
 
         drange = image.max() - image.min()
         preview_data = (255.0 * ((image - image.min()) / drange)).astype('uint8')
