@@ -312,11 +312,19 @@ class reader:
         except:
             if (self.last_good_meta is not None):
                 print('WARNING: No meta data for frame, using last known good metadata')
-                image = frame.get_radiometric_image(self.last_good_meta)
+                try:
+                    image = frame.get_radiometric_image(self.last_good_meta)
+                except:
+                    print('ERROR: Failed to read image from buffer')
+                    return None, None, None
             else:
                 print('WARNING: No meta data for frame and none previously extracted, raw data returned')
-                image = frame.get_image()
-
+                try:
+                    image = frame.get_image()
+                except:
+                    print('ERROR: Failed to read image from buffer')
+                    return None, None, None
+                    
         drange = image.max() - image.min()
         preview_data = (255.0 * ((image - image.min()) / drange)).astype('uint8')
         preview_data = cv2.cvtColor(preview_data, cv2.COLOR_GRAY2RGB)
