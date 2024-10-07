@@ -286,7 +286,7 @@ class reader:
                     continue
                 else:
                     print('Loaded All Files')
-                    return None, None, None
+                    return False, False, False
 
             index = match.start()
             chunksize = index - self.prev_pos
